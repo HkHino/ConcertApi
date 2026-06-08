@@ -69,6 +69,7 @@ public class OrdersController : ControllerBase
             order.TicketId,
             order.Status,
             order.PurchasedAt,
+            ticketStatus = ticket.Status, // Show updated ticket status in response, and confirms that the purchase succeeded
             _links = new Dictionary<string, LinkDto>
             {
                 ["self"] = new($"/api/v1/orders/{order.Id}"),
@@ -92,6 +93,7 @@ public class OrdersController : ControllerBase
 
         var q = _db.Orders.AsNoTracking().AsQueryable();
 
+        // SECURITY: mine=false means "view all orders" -> Admin only
         if (mine)
         {
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -180,6 +182,7 @@ public class OrdersController : ControllerBase
         var userId = long.Parse(userIdStr);
         var isAdmin = User.IsInRole("Admin");
 
+        // SECURITY: Only order owner (or Admin) can access a specific order
         if (!isAdmin && order.UserId != userId)
             return Forbid(); // 403
 

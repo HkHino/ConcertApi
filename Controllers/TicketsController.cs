@@ -105,20 +105,137 @@ public class TicketsController : ControllerBase
     }
 
     // GET /api/v1/tickets/5
+    // GET /api/v1/tickets/5
     [HttpGet("{id:long}")]
     public async Task<IActionResult> GetTicket(long id)
     {
-        var t = await _db.Tickets.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
-        if (t is null) return NotFound(new { message = "Ticket not found." });
+        var raw = await _db.Tickets.AsNoTracking()
+            .Where(x => x.Id == id)
+            .Join(_db.Concerts.AsNoTracking(),
+                  ticket => ticket.ConcertId,
+                  concert => concert.Id,
+                  (ticket, concert) => new
+                  {
+                      ticket.Id,
+                      ticket.ConcertId,
+                      concertTitle = concert.Title,
+                      concertArtist = concert.Artist,
+                      concertCity = concert.City,
+                      concertDate = concert.ConcertDate,
+                      ticket.Price,
+                      ticket.SeatNumber,
+                      ticket.Status
+                  })
+            .FirstOrDefaultAsync();
 
-        return Ok(new
+        if (raw is null) return NotFound(new { message = "Ticket not found." });
+
+        var result = new
         {
-            t.Id,
-            t.ConcertId,
-            t.Price,
-            t.SeatNumber,
-            t.Status,
-            _links = BuildTicketLinks(t.Id, t.ConcertId, t.Status)
+            raw.Id,
+            raw.ConcertId,
+            raw.concertTitle,
+            raw.concertArtist,
+            raw.concertCity,
+            raw.concertDate,
+            raw.Price,
+            raw.SeatNumber,
+            raw.Status,
+            _links = BuildTicketLinks(raw.Id, raw.ConcertId, raw.Status)
+        };
+
+        return Ok(result);
+    }
+
+    [HttpGet("search")]
+    public async Task<ActionResult<PagedResponse<object>>> SearchTickets(
+    string? artist = null,
+    string? concertTitle = null,
+    string? city = null,
+    int page = 1,
+    int pageSize = 10)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 50);
+
+        var q = from t in _db.Tickets.AsNoTracking()
+                join c in _db.Concerts.AsNoTracking() on t.ConcertId equals c.Id
+                select new { t, c };
+
+        if (!string.IsNullOrWhiteSpace(artist))
+        {
+            var a = artist.Trim().ToLower();
+            q = q.Where(x => x.c.Artist.ToLower().Contains(a));
+        }
+
+        if (!string.IsNullOrWhiteSpace(concertTitle))
+        {
+            var ct = concertTitle.Trim().ToLower();
+            q = q.Where(x => x.c.Title.ToLower().Contains(ct));
+        }
+
+        if (!string.IsNullOrWhiteSpace(city))
+        {
+            var cy = city.Trim().ToLower();
+            q = q.Where(x => x.c.City.ToLower().Contains(cy));
+        }
+
+        var total = await q.CountAsync();
+        var totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
+        if (page > totalPages) page = totalPages;
+
+        var raw = await q
+    .OrderBy(x => x.c.ConcertDate)
+    .Skip((page - 1) * pageSize)
+    .Take(pageSize)
+    .Select(x => new
+    {
+        x.t.Id,
+        x.t.ConcertId,
+        concertTitle = x.c.Title,
+        concertArtist = x.c.Artist,
+        concertCity = x.c.City,
+        concertDate = x.c.ConcertDate,
+        x.t.Price,
+        x.t.SeatNumber,
+        x.t.Status
+    })
+    .ToListAsync();
+
+        // Build links AFTER query executes (Option A)
+        var items = raw.Select(x => (object)new
+        {
+            x.Id,
+            x.ConcertId,
+            x.concertTitle,
+            x.concertArtist,
+            x.concertCity,
+            x.concertDate,
+            x.Price,
+            x.SeatNumber,
+            x.Status,
+            _links = BuildTicketLinks(x.Id, x.ConcertId, x.Status)
+        }).ToList();
+
+        string BuildUrl(int p) =>
+            $"/api/v1/tickets/search?page={p}&pageSize={pageSize}"
+            + (!string.IsNullOrWhiteSpace(artist) ? $"&artist={Uri.EscapeDataString(artist)}" : "")
+            + (!string.IsNullOrWhiteSpace(concertTitle) ? $"&concertTitle={Uri.EscapeDataString(concertTitle)}" : "")
+            + (!string.IsNullOrWhiteSpace(city) ? $"&city={Uri.EscapeDataString(city)}" : "");
+
+        return Ok(new PagedResponse<object>
+        {
+            Items = items,
+            Page = page,
+            PageSize = pageSize,
+            TotalItems = total,
+            TotalPages = totalPages,
+            _links = new Dictionary<string, LinkDto>
+            {
+                ["self"] = new(BuildUrl(page)),
+                ["next"] = new(page < totalPages ? BuildUrl(page + 1) : null),
+                ["prev"] = new(page > 1 ? BuildUrl(page - 1) : null),
+            }
         });
     }
 }

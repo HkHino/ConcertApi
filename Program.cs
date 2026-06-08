@@ -87,7 +87,10 @@ app.UseHttpsRedirection();
 
 app.UseMiddleware<RevocationMiddleware>();
 
+// AUTH ENFORCEMENT (Bearer JWT):
+// - UseAuthentication validates the Authorization: Bearer <token> header and builds HttpContext.User
 app.UseAuthentication();
+// - UseAuthorization enforces [Authorize] and role policies on endpoints
 app.UseAuthorization();
 
 app.MapControllers();

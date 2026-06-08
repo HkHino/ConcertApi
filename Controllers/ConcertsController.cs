@@ -1,5 +1,4 @@
 ﻿using ConcertApi.Data;
-using ConcertApi.Dtos;
 using ConcertApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,86 +14,100 @@ public class ConcertsController : ControllerBase
     private readonly AppDbContext _db;
     public ConcertsController(AppDbContext db) => _db = db;
 
-    [HttpGet]
-    public async Task<ActionResult<PagedResponse<object>>> GetConcerts(
+[HttpGet]
+public async Task<ActionResult<PagedResponse<object>>> GetConcerts(
     string? search = null,
     string? city = null,
     int page = 1,
     int pageSize = 10)
+{
+    // defaults: empty search => page 1, 10 concerts
+    page = Math.Max(1, page);
+    pageSize = Math.Clamp(pageSize, 1, 50);
+
+    var q = _db.Concerts.AsNoTracking().AsQueryable();
+
+    // Make search case-insensitive (explicit)
+    if (!string.IsNullOrWhiteSpace(search))
     {
-        page = Math.Max(1, page);
-        pageSize = Math.Clamp(pageSize, 1, 50);
+        var s = search.Trim().ToLower();
 
-        var q = _db.Concerts.AsNoTracking().AsQueryable();
+        q = q.Where(c =>
+            c.Title.ToLower().Contains(s) ||
+            c.Artist.ToLower().Contains(s) ||
+            c.Venue.ToLower().Contains(s) ||
+            c.City.ToLower().Contains(s)   // ✅ makes search=Copenhagen hit city automatically
+        );
+    }
 
-        if (!string.IsNullOrWhiteSpace(search))
-            q = q.Where(c => c.Title.Contains(search) || c.Artist.Contains(search) || c.Venue.Contains(search));
+    // Optional dedicated city filter (also case-insensitive)
+    if (!string.IsNullOrWhiteSpace(city))
+    {
+        var cty = city.Trim().ToLower();
+        q = q.Where(c => c.City.ToLower().Contains(cty));
+    }
 
-        if (!string.IsNullOrWhiteSpace(city))
-            q = q.Where(c => c.City.Contains(city));
+    var total = await q.CountAsync();
+    var totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
 
-        var total = await q.CountAsync();
-        var totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
+    if (page > totalPages) page = totalPages;
 
-        // Keep page within range
-        if (page > totalPages) page = totalPages;
-
-        var rawItems = await q
-            .OrderBy(c => c.ConcertDate)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(c => new
-            {
-                c.Id,
-                c.Title,
-                c.Artist,
-                c.City,
-                c.ConcertDate
-            })
-            .ToListAsync();
-
-        var items = rawItems
-            .Select(c => (object)new
-            {
-                c.Id,
-                c.Title,
-                c.Artist,
-                c.City,
-                c.ConcertDate,
-                _links = new Dictionary<string, LinkDto>
-                {
-                    ["self"] = new($"/api/v1/concerts/{c.Id}"),
-                    ["tickets"] = new($"/api/v1/tickets?concertId={c.Id}&page=1&pageSize=10")
-                }
-            })
-            .ToList();
-
-        string BuildUrl(int p) =>
-            $"/api/v1/concerts?page={p}&pageSize={pageSize}"
-            + (string.IsNullOrWhiteSpace(search) ? "" : $"&search={Uri.EscapeDataString(search)}")
-            + (string.IsNullOrWhiteSpace(city) ? "" : $"&city={Uri.EscapeDataString(city)}");
-
-        return Ok(new PagedResponse<object>
+    var rawItems = await q
+        .OrderBy(c => c.ConcertDate)
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .Select(c => new
         {
-            Items = items,
-            Page = page,
-            PageSize = pageSize,
-            TotalItems = total,
-            TotalPages = totalPages,
+            c.Id,
+            c.Title,
+            c.Artist,
+            c.City,
+            c.ConcertDate
+        })
+        .ToListAsync();
+
+    var items = rawItems
+        .Select(c => (object)new
+        {
+            c.Id,
+            c.Title,
+            c.Artist,
+            c.City,
+            c.ConcertDate,
             _links = new Dictionary<string, LinkDto>
             {
-                ["self"] = new(BuildUrl(page)),
-                ["next"] = new(page < totalPages ? BuildUrl(page + 1) : null),
-                ["prev"] = new(page > 1 ? BuildUrl(page - 1) : null),
+                ["self"] = new($"/api/v1/concerts/{c.Id}"),
+                ["tickets"] = new($"/api/v1/tickets?concertId={c.Id}&page=1&pageSize=10")
             }
-        });
-    }
+        })
+        .ToList();
+
+    string BuildUrl(int p) =>
+        $"/api/v1/concerts?page={p}&pageSize={pageSize}"
+        + (string.IsNullOrWhiteSpace(search) ? "" : $"&search={Uri.EscapeDataString(search)}")
+        + (string.IsNullOrWhiteSpace(city) ? "" : $"&city={Uri.EscapeDataString(city)}");
+
+    return Ok(new PagedResponse<object>
+    {
+        Items = items,
+        Page = page,
+        PageSize = pageSize,
+        TotalItems = total,
+        TotalPages = totalPages,
+        _links = new Dictionary<string, LinkDto>
+        {
+            ["self"] = new(BuildUrl(page)),
+            ["next"] = new(page < totalPages ? BuildUrl(page + 1) : null),
+            ["prev"] = new(page > 1 ? BuildUrl(page - 1) : null),
+        }
+    });
+}
 
     [HttpGet("{id:long}")]
     public async Task<IActionResult> GetConcert(long id)
     {
         var c = await _db.Concerts.AsNoTracking().FirstOrDefaultAsync(x => (long)x.Id == id);
-        if (c is null) return NotFound();
+        if (c is null) return NotFound(new { message = "Concert not found." });
 
         return Ok(new
         {

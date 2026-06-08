@@ -7,6 +7,7 @@ public static class DbSeeder
 {
     public static async Task SeedAsync(AppDbContext db)
     {
+        //grant types are password and refresh_token
         // Ensure DB connection works
         await db.Database.CanConnectAsync();
 
