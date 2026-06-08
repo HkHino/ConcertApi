@@ -1,10 +1,10 @@
 {
   "info": {
-    "_postman_id": "0d8ff2fc-49fa-482c-8082-f792c7b7e978",
-    "name": "ConcertApi Tests",
+    "_postman_id": "6dbc40f7-b4d1-4620-89fd-c391d48cbc4b",
+    "name": "ConcertApi Tests Copy",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "26161247",
-    "_collection_link": "https://go.postman.co/collection/26161247-0d8ff2fc-49fa-482c-8082-f792c7b7e978?source=collection_link"
+    "_collection_link": "https://go.postman.co/collection/26161247-6dbc40f7-b4d1-4620-89fd-c391d48cbc4b?source=collection_link"
   },
   "item": [
     {
@@ -366,39 +366,6 @@
       "response": []
     },
     {
-      "name": "{{baseUrl}}/api/v1/orders/{{orderId}}",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));"
-            ],
-            "type": "text/javascript",
-            "packages": {},
-            "requests": {}
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/api/v1/orders/{{orderId}}",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "v1",
-            "orders",
-            "{{orderId}}"
-          ]
-        }
-      },
-      "response": []
-    },
-    {
       "name": "{{baseUrl}}/api/v1/orders Copy",
       "event": [
         {
@@ -436,6 +403,39 @@
             "api",
             "v1",
             "orders"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "{{baseUrl}}/api/v1/orders/{{orderId}}",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/orders/{{orderId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "orders",
+            "{{orderId}}"
           ]
         }
       },
@@ -487,70 +487,33 @@
       "response": []
     },
     {
-      "name": "{{baseUrl}}/api/v1/oauth/revoke",
+      "name": "OAuth token (password grant) - user1",
       "event": [
         {
           "listen": "test",
           "script": {
-            "exec": [
-              "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));"
-            ],
             "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));\n",
+              "const json = pm.response.json();\n",
+              "pm.environment.set(\"access_token_user\", json.access_token);\n",
+              "if (json.refresh_token) pm.environment.set(\"refresh_token_user\", json.refresh_token);\n",
+              "pm.test(\"access_token_user saved\", () => pm.expect(pm.environment.get(\"access_token_user\")).to.exist);\n"
+            ],
             "packages": {},
             "requests": {}
           }
         }
       ],
       "request": {
-        "method": "POST",
-        "header": [],
-        "body": {
-          "mode": "raw",
-          "raw": "{\r\n  \"refreshToken\": \"{{refresh_token}}\"\r\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
+        "auth": {
+          "type": "noauth"
         },
-        "url": {
-          "raw": "{{baseUrl}}/api/v1/oauth/revoke",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "v1",
-            "oauth",
-            "revoke"
-          ]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "{{baseUrl}}/api/v1/oauth/token",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test(\"Status is 401 after revoke (refresh token invalid)\", () => {\r",
-              "  pm.expect(pm.response.code).to.eql(401);\r",
-              "});"
-            ],
-            "type": "text/javascript",
-            "packages": {},
-            "requests": {}
-          }
-        }
-      ],
-      "request": {
         "method": "POST",
         "header": [],
         "body": {
           "mode": "raw",
-          "raw": "{\r\n  \"grantType\": \"refresh_token\",\r\n  \"refreshToken\": \"{{refresh_token}}\"\r\n}",
+          "raw": "{\n  \"grantType\": \"password\",\n  \"username\": \"user1@concert.local\",\n  \"password\": \"Password123!\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -573,25 +536,35 @@
       "response": []
     },
     {
-      "name": "{{baseUrl}}/api/v1/orders",
+      "name": "NEGATIVE - Orders list all (mine=false) as non-admin should be 403",
       "event": [
         {
           "listen": "test",
           "script": {
-            "exec": [
-              "pm.test(\"Status is 401 after revoke\", () => pm.response.to.have.status(401));"
-            ],
             "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 403\", () => pm.response.to.have.status(403));\n"
+            ],
             "packages": {},
             "requests": {}
           }
         }
       ],
       "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token_user}}",
+              "type": "string"
+            }
+          ]
+        },
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/api/v1/orders?mine=true&page=1&pageSize=10",
+          "raw": "{{baseUrl}}/api/v1/orders?mine=false&page=1&pageSize=10",
           "host": [
             "{{baseUrl}}"
           ],
@@ -603,7 +576,7 @@
           "query": [
             {
               "key": "mine",
-              "value": "true"
+              "value": "false"
             },
             {
               "key": "page",
@@ -613,6 +586,297 @@
               "key": "pageSize",
               "value": "10"
             }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "NEGATIVE - Create concert without token should be 401",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 401\", () => pm.response.to.have.status(401));\n"
+            ],
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"NoAuth Concert\",\n  \"artist\": \"NoAuth\",\n  \"venue\": \"Nowhere\",\n  \"city\": \"Copenhagen\",\n  \"concertDate\": \"2026-12-01T20:00:00\",\n  \"description\": \"Should fail\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/concerts",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "concerts"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "NEGATIVE - Create order without token should be 401",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 401\", () => pm.response.to.have.status(401));\n"
+            ],
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ticketId\": 1\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/orders",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "orders"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "NEGATIVE - Create concert missing required fields should be 400",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));\n"
+            ],
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"\",\n  \"artist\": \"X\",\n  \"venue\": \"\",\n  \"city\": \"Copenhagen\",\n  \"concertDate\": \"2026-12-01T20:00:00\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/concerts",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "concerts"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "NEGATIVE - Get concert not found should be 404",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 404\", () => pm.response.to.have.status(404));\n"
+            ],
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/concerts/99999999",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "concerts",
+            "99999999"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "NEGATIVE - Tickets list invalid status should be 400",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));\n"
+            ],
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/tickets?status=BadStatus&page=1&pageSize=10",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "tickets"
+          ],
+          "query": [
+            {
+              "key": "status",
+              "value": "BadStatus"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "pageSize",
+              "value": "10"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "NEGATIVE - Create order invalid ticketId should be 404",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 404\", () => pm.response.to.have.status(404));\n"
+            ],
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ticketId\": 99999999\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/orders",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "orders"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "NEGATIVE - Revoke without refreshToken should be 400",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));\n"
+            ],
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/oauth/revoke",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "oauth",
+            "revoke"
           ]
         }
       },
@@ -799,33 +1063,70 @@
       "response": []
     },
     {
-      "name": "OAuth token (password grant) - user1",
+      "name": "{{baseUrl}}/api/v1/oauth/revoke",
       "event": [
         {
           "listen": "test",
           "script": {
-            "type": "text/javascript",
             "exec": [
-              "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));\n",
-              "const json = pm.response.json();\n",
-              "pm.environment.set(\"access_token_user\", json.access_token);\n",
-              "if (json.refresh_token) pm.environment.set(\"refresh_token_user\", json.refresh_token);\n",
-              "pm.test(\"access_token_user saved\", () => pm.expect(pm.environment.get(\"access_token_user\")).to.exist);\n"
+              "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));"
             ],
+            "type": "text/javascript",
             "packages": {},
             "requests": {}
           }
         }
       ],
       "request": {
-        "auth": {
-          "type": "noauth"
-        },
         "method": "POST",
         "header": [],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"grantType\": \"password\",\n  \"username\": \"user1@concert.local\",\n  \"password\": \"Password123!\"\n}",
+          "raw": "{\r\n  \"refreshToken\": \"{{refresh_token}}\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/oauth/revoke",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "oauth",
+            "revoke"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "{{baseUrl}}/api/v1/oauth/token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status is 401 after revoke (refresh token invalid)\", () => {\r",
+              "  pm.expect(pm.response.code).to.eql(401);\r",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"grantType\": \"refresh_token\",\r\n  \"refreshToken\": \"{{refresh_token}}\"\r\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -848,35 +1149,25 @@
       "response": []
     },
     {
-      "name": "NEGATIVE - Orders list all (mine=false) as non-admin should be 403",
+      "name": "{{baseUrl}}/api/v1/orders",
       "event": [
         {
           "listen": "test",
           "script": {
-            "type": "text/javascript",
             "exec": [
-              "pm.test(\"Status is 403\", () => pm.response.to.have.status(403));\n"
+              "pm.test(\"Status is 401 after revoke\", () => pm.response.to.have.status(401));"
             ],
+            "type": "text/javascript",
             "packages": {},
             "requests": {}
           }
         }
       ],
       "request": {
-        "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{access_token_user}}",
-              "type": "string"
-            }
-          ]
-        },
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/api/v1/orders?mine=false&page=1&pageSize=10",
+          "raw": "{{baseUrl}}/api/v1/orders?mine=true&page=1&pageSize=10",
           "host": [
             "{{baseUrl}}"
           ],
@@ -888,7 +1179,7 @@
           "query": [
             {
               "key": "mine",
-              "value": "false"
+              "value": "true"
             },
             {
               "key": "page",
@@ -898,297 +1189,6 @@
               "key": "pageSize",
               "value": "10"
             }
-          ]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "NEGATIVE - Create concert without token should be 401",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test(\"Status is 401\", () => pm.response.to.have.status(401));\n"
-            ],
-            "packages": {},
-            "requests": {}
-          }
-        }
-      ],
-      "request": {
-        "auth": {
-          "type": "noauth"
-        },
-        "method": "POST",
-        "header": [],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"title\": \"NoAuth Concert\",\n  \"artist\": \"NoAuth\",\n  \"venue\": \"Nowhere\",\n  \"city\": \"Copenhagen\",\n  \"concertDate\": \"2026-12-01T20:00:00\",\n  \"description\": \"Should fail\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        },
-        "url": {
-          "raw": "{{baseUrl}}/api/v1/concerts",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "v1",
-            "concerts"
-          ]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "NEGATIVE - Create concert missing required fields should be 400",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));\n"
-            ],
-            "packages": {},
-            "requests": {}
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"title\": \"\",\n  \"artist\": \"X\",\n  \"venue\": \"\",\n  \"city\": \"Copenhagen\",\n  \"concertDate\": \"2026-12-01T20:00:00\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        },
-        "url": {
-          "raw": "{{baseUrl}}/api/v1/concerts",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "v1",
-            "concerts"
-          ]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "NEGATIVE - Get concert not found should be 404",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test(\"Status is 404\", () => pm.response.to.have.status(404));\n"
-            ],
-            "packages": {},
-            "requests": {}
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/api/v1/concerts/99999999",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "v1",
-            "concerts",
-            "99999999"
-          ]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "NEGATIVE - Tickets list invalid status should be 400",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));\n"
-            ],
-            "packages": {},
-            "requests": {}
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/api/v1/tickets?status=BadStatus&page=1&pageSize=10",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "v1",
-            "tickets"
-          ],
-          "query": [
-            {
-              "key": "status",
-              "value": "BadStatus"
-            },
-            {
-              "key": "page",
-              "value": "1"
-            },
-            {
-              "key": "pageSize",
-              "value": "10"
-            }
-          ]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "NEGATIVE - Create order without token should be 401",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test(\"Status is 401\", () => pm.response.to.have.status(401));\n"
-            ],
-            "packages": {},
-            "requests": {}
-          }
-        }
-      ],
-      "request": {
-        "auth": {
-          "type": "noauth"
-        },
-        "method": "POST",
-        "header": [],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"ticketId\": 1\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        },
-        "url": {
-          "raw": "{{baseUrl}}/api/v1/orders",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "v1",
-            "orders"
-          ]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "NEGATIVE - Create order invalid ticketId should be 404",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test(\"Status is 404\", () => pm.response.to.have.status(404));\n"
-            ],
-            "packages": {},
-            "requests": {}
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"ticketId\": 99999999\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        },
-        "url": {
-          "raw": "{{baseUrl}}/api/v1/orders",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "v1",
-            "orders"
-          ]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "NEGATIVE - Revoke without refreshToken should be 400",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));\n"
-            ],
-            "packages": {},
-            "requests": {}
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        },
-        "url": {
-          "raw": "{{baseUrl}}/api/v1/oauth/revoke",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "v1",
-            "oauth",
-            "revoke"
           ]
         }
       },
